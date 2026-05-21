@@ -38,6 +38,8 @@ class PredictRequest(BaseModel):
 
 class PredictResponse(BaseModel):
     prediction: str
+    confidence: float | None = None
+    all_scores: Dict[str, float] | None = None
 
 def preprocess_image(b64_str: str) -> np.ndarray:
     try:
@@ -87,4 +89,9 @@ def predict(req: PredictRequest):
     confidence = float(scores[idx])
 
     logger.info(f"Prediction: {prediction}  ({confidence:.2%})")
-    return PredictResponse(prediction=prediction)
+    all_scores_dict = {EMOTIONS[i]: float(scores[i]) for i in range(len(EMOTIONS))}
+    return PredictResponse(
+        prediction=prediction,
+        confidence=confidence,
+        all_scores=all_scores_dict
+    )
