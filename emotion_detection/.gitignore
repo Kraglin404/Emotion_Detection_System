@@ -16,11 +16,11 @@ venv/
 env/
 tf_env/
 
-# Large model / dataset files in the new folder
-emotion_detection_system/training/fer2013.csv
-emotion_detection_system/training/emotion_model.h5
-emotion_detection_system/training/dataset/
-emotion_detection_system/training/saved_model/
+# Large model / dataset files
+training/fer2013.csv
+training/emotion_model.h5
+training/dataset/
+training/saved_model/
 
 # Snapshots saved by webcam client
 snapshot*.jpg
