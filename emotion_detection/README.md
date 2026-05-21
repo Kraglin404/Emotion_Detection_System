@@ -1,183 +1,96 @@
-# Emotion Detection System (PC Webcam)
+# Real-Time Facial Emotion Detection System
 
-Real-time facial emotion detection using your **PC webcam**.  
-A CNN trained on [FER2013](https://www.kaggle.com/datasets/msambare/fer2013) classifies emotions via a **FastAPI** REST API + **TensorFlow Lite** inference.  
-Detected emotions are overlaid live on the video feed with confidence bars.
-
-> Adapted from [riyaupadhyay1611/Edge_Cloud_Emotion_Detection_System](https://github.com/riyaupadhyay1611/Edge_Cloud_Emotion_Detection_System).  
-> Raspberry Pi / PiCamera2 / OLED dependencies removed; runs on any standard PC with a webcam.
+A low-latency, high-accuracy facial emotion detection pipeline consisting of a deep convolutional neural network, a FastAPI backend service, and an OpenCV webcam client.
 
 ---
 
-## Emotion Classes
+## Repository Structure
 
-| Label    | Label    | Label   |
-|----------|----------|---------|
-| Angry    | Disgust  | Fear    |
-| Happy    | Sad      | Surprise|
-| Neutral  |          |         |
+To keep the repository clean and easy to download, the project is structured as follows:
 
----
-
-## Architecture
-
-```
-Webcam (webcam_client.py)
-        │
-        │ HTTP POST /predict  { "image": "<base64 JPEG>" }
-        ▼
-ML Service  (FastAPI  –  ml_service/app.py)
-        │
-        │ TFLite inference  (emotion_model.tflite)
-        ▼
-Response  { "prediction": "Happy", "confidence": 0.97, "all_scores": {...} }
-        │
-        ▼
-Live OpenCV window with bounding box + label + confidence bars
-```
-
----
-
-## Project Structure
-
-```
+```text
 emotion_detection/
-├── ml_service/
-│   ├── app.py               # FastAPI server (POST /predict)
-│   └── inference.py         # TFLite inference helper (also usable standalone)
-│   └── emotion_model.tflite # Converted model  ← copy here after training
-├── training/
-│   ├── train_model.py       # Train CNN on FER2013  → emotion_model.h5
-│   ├── convert_to_tflite.py # Convert .h5 → .tflite
-│   └── fer2013.csv          # Download from Kaggle  (not tracked in git)
-├── webcam_client.py         # PC webcam client with live overlay
-├── startml.sh               # Helper: start ML service
-├── startwebcam.sh           # Helper: start webcam client
-├── requirements.txt
-└── README.md
+├── emotion_detection_system/        # Main project folder containing all source code
+│   ├── ml_service/
+│   │   ├── app.py                  # FastAPI server (POST /predict)
+│   │   └── emotion_model.tflite    # Active deployed TFLite model
+│   ├── training/
+│   │   ├── train_from_images.py    # Custom 4-block CNN training pipeline
+│   │   ├── evaluate.py             # Pure-NumPy test set evaluator (7,178 images)
+│   │   ├── reconvert.py            # Helper script to export full-precision TFLite
+│   │   └── emotion_model.tflite    # Deployed model backup
+│   ├── webcam_client.py            # OpenCV webcam client with live overlay HUD
+│   ├── requirements.txt            # Project dependency manifest
+│   ├── startml.sh                  # Helper shell script for ML service startup
+│   ├── startwebcam.sh                  # Helper shell script for Webcam client startup
+│   └── README.md                   # Nested directory documentation
+├── emotion_detection_system.zip    # Single editable ZIP archive packaging the folder above
+└── README.md                       # Root repository guide (this file)
 ```
 
 ---
 
-## Setup
+## Setup & Running the System
 
-### 1. Install dependencies
-
+### 1. Install Dependencies
+Initialize your virtual environment and install the required libraries:
 ```bash
+# Initialize virtual environment at the repository root
+python -m venv .venv
+.venv\Scripts\activate # On Windows
+
+# Navigate into the project folder and install dependencies
+cd emotion_detection_system
 pip install -r requirements.txt
 ```
 
-> **Tip:** Use a virtual environment to keep things clean:
-> ```bash
-> python -m venv .venv && source .venv/bin/activate   # Linux/macOS
-> python -m venv .venv && .venv\Scripts\activate       # Windows
-> pip install -r requirements.txt
-> ```
-
----
-
-### 2. Download the FER2013 dataset
-
-1. Go to https://www.kaggle.com/datasets/msambare/fer2013
-2. Download `fer2013.csv`
-3. Place it in `training/`
-
----
-
-### 3. Train the model
-
+### 2. Running the Server (API)
+Start the FastAPI server on port `8001`:
 ```bash
-cd training
-python train_model.py        # → emotion_model.h5  (~50 epochs, EarlyStopping)
-python convert_to_tflite.py  # → emotion_model.tflite
+uvicorn ml_service.app:app --host 0.0.0.0 --port 8001
 ```
+* **Interactive API Documentation** can be viewed at: `http://localhost:8001/docs`
+* **Health Check**: `http://localhost:8001/health`
 
-Then copy the TFLite file to the service folder:
-
+### 3. Running the Webcam Client
+Open a second terminal window (with `.venv` active), navigate to the `emotion_detection_system` directory, and run:
 ```bash
-cp training/emotion_model.tflite ml_service/
+python webcam_client.py --server http://127.0.0.1:8001/predict
+```
+* **Webcam Controls:**
+  * Press `q` to Quit.
+  * Press `s` to Save a snapshot to `snapshot.jpg`.
+  * Press `p` to Pause/Resume.
+
+### 4. Running Model Evaluation
+To verify model accuracy, precision, and recall metrics over the 7,178 test images:
+```bash
+python training/evaluate.py
 ```
 
 ---
 
-### 4. Start the ML service
-
-```bash
-bash startml.sh
-# or manually:
-uvicorn ml_service.app:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Interactive API docs: http://localhost:8000/docs
-
----
-
-### 5. Start the webcam client
-
-Open a second terminal:
-
-```bash
-bash startwebcam.sh
-# or manually:
-python webcam_client.py --camera 0 --server http://localhost:8000/predict
-```
-
-**Controls in the video window:**
-
-| Key | Action |
-|-----|--------|
-| `q` | Quit |
-| `s` | Save snapshot as `snapshot.jpg` |
-| `p` | Pause / resume |
-
----
-
-## API Reference
+## API Schema
 
 ### `GET /health`
-
-```json
-{ "status": "ok", "emotions": ["Angry","Disgust","Fear","Happy","Sad","Surprise","Neutral"] }
-```
-
-### `POST /predict`
-
-**Request body:**
-```json
-{ "image": "<base64-encoded JPEG>" }
-```
-
-**Response:**
+* **Response:**
 ```json
 {
-  "prediction": "Happy",
-  "confidence": 0.9712,
-  "all_scores": {
-    "Angry": 0.0023,
-    "Disgust": 0.0001,
-    "Fear": 0.0045,
-    "Happy": 0.9712,
-    "Sad": 0.0081,
-    "Surprise": 0.0134,
-    "Neutral": 0.0004
-  }
+  "status": "ok",
+  "emotions": ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
 }
 ```
 
----
-
-## Quick inference test (no server needed)
-
-```bash
-python ml_service/inference.py path/to/face.jpg
+### `POST /predict`
+* **Request Body:**
+```json
+{
+  "image": "<base64-encoded JPEG>"
+}
 ```
-
----
-
-## Notes
-
-- **Multiple cameras:** if `--camera 0` doesn't work, try `1` or `2`.
-- **Remote server:** you can run the ML service on any machine on your network and point the client at it:  
-  `python webcam_client.py --server http://192.168.1.10:8000/predict`
-- **Lighter runtime:** replace `tensorflow` in `requirements.txt` with `tflite-runtime` if you only need inference (no training).
-- **Training time:** FER2013 has ~35 k images; expect 10–30 min on a modern GPU, longer on CPU.
+* **Response Body:**
+```json
+{
+  "prediction": "Happy"
+}
+```
