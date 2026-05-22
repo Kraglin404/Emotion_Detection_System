@@ -88,6 +88,9 @@ def main():
         print("        Please ensure you have placed your test images in 'training/dataset/test/'.")
         sys.exit(1)
 
+    print(f"\n[INFO] Loaded {len(X_test)} test images successfully.")
+    print("[INFO] Starting evaluation loop... (This should take around 15-30 seconds)")
+    
     y_pred = []
     
     for i in range(len(X_test)):
@@ -97,8 +100,8 @@ def main():
         scores = interpreter.get_tensor(output_details[0]["index"])[0]
         y_pred.append(np.argmax(scores))
         
-        if (i + 1) % 1000 == 0:
-            print(f"       Evaluated {i + 1}/{len(X_test)} images ...")
+        if (i + 1) % 250 == 0 or (i + 1) == len(X_test):
+            print(f"       → Processed {i + 1}/{len(X_test)} images ...")
 
     y_pred = np.array(y_pred, dtype=np.int32)
 
