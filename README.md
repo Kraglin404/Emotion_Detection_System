@@ -133,6 +133,16 @@ Our model was trained and evaluated on the benchmark **FER-2013** dataset, conta
 1. **Extremely High Noise:** Extreme lighting variance, occlusions (hands/hair in front of faces), cartoon faces, and significant mislabeling.
 2. **Severe Class Imbalance:** The distribution is highly skewed, with `Happy` having over 7,200 training images, while `Disgust` has only 436 training images.
 
+### Balanced Loss & Weight Adjustment
+
+FER2013 is heavily imbalanced — *Happy* has ~8,000 samples while *Disgust* has under 500. Without correction, the model learns to ignore minority classes entirely.
+
+To counteract this, the training pipeline dynamically computes inverse-frequency class weights:
+
+$$\text{weight}_c = \frac{N_{\text{total}}}{C \cdot N_c}$$
+
+Where $N_{\text{total}}$ is the total training samples, $C = 7$ is the number of emotion classes, and $N_c$ is the sample count for class $c$. Rarer classes receive proportionally higher weights, penalizing the loss function more heavily for their misclassifications. This directly improves F1-scores on underrepresented emotions like *Disgust* and *Fear* without any data augmentation overhead.
+
 ---
 
 ## Project Structure
