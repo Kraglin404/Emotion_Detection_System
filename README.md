@@ -127,39 +127,11 @@ Below is the normalized confusion matrix heatmap generated directly from our tes
 
 ---
 
-## Dataset & Imbalance Handling
+## The FER-2013 Dataset
 
-### The FER-2013 Dataset
-Our model was trained on the benchmark **FER-2013** dataset (Facial Expression Recognition 2013), containing 35,887 grayscale, 48x48 pixel faces. This dataset is notoriously difficult due to:
+Our model was trained and evaluated on the benchmark **FER-2013** dataset, containing 35,887 grayscale, 48x48 pixel faces. This dataset is widely recognized as highly challenging due to:
 1. **Extremely High Noise:** Extreme lighting variance, occlusions (hands/hair in front of faces), cartoon faces, and significant mislabeling.
 2. **Severe Class Imbalance:** The distribution is highly skewed, with `Happy` having over 7,200 training images, while `Disgust` has only 436 training images.
-
-### Balanced Loss & Weight Adjustment
-To prevent the model from purely memorizing majority classes (like Happy) and ignoring minority classes (like Disgust and Fear), our training pipeline dynamically computes **balanced class weights**:
-$$\text{weight}_c = \frac{N_{\text{total}}}{C \cdot N_c}$$
-Where $N_{\text{total}}$ is the total samples, $C$ is the number of classes (7), and $N_c$ is the samples in class $c$. This penalizes the loss function more heavily for minority class misclassifications, directly lifting F1-scores.
-
----
-
-## How to Enhance Performance Further (Going Beyond 57.4%)
-
-A raw accuracy of **57.4%** on FER-2013 is **very solid** and highly competitive for a custom, lightweight CNN trained from scratch (human baseline accuracy on this noisy dataset is only about **65% ± 5%**). However, for production-grade environments, several advanced techniques can be applied:
-
-### 1. Top-2 & Top-3 Accuracy Metrics
-In emotion classification, expressions are often compound (e.g., an angry-sad look or a surprised-fearful look). Under **Top-2 Accuracy** (which measures if the true emotion is within the model's top 2 predictions), our pipeline achieves over **78% accuracy**! Highlighting Top-2 accuracy in demos provides a much more practical measure of the system's interactive usability.
-
-### 2. Transfer Learning (Pre-trained Weights)
-Instead of training from scratch, we can initialize our CNN using pre-trained feature extractors:
-* **VGGFace2 or ImageNet Pre-trained weights:** Fine-tuning a pre-trained **MobileNetV2** or **ResNet50** on our facial image set.
-* **Expected Boost:** Instantly elevates test accuracy to **68% - 73%+**.
-
-### 3. Advanced Focal Loss
-Replace the standard `categorical_crossentropy` loss with **Focal Loss**:
-$$\text{FL}(p_t) = -\alpha_t (1 - p_t)^\gamma \log(p_t)$$
-Focal loss adds a modulating factor $(1 - p_t)^\gamma$ to the loss, downweighting easy-to-classify examples (like Happy) so the model focuses almost entirely on hard-to-classify samples (like Disgust and Fear).
-
-### 4. Real-time Temporal Smoothing
-In our webcam client, single-frame predictions are vulnerable to momentary blinks or face orientation changes. Implementing **temporal window smoothing** (e.g., predicting the running average of the last 5 frames) yields a much smoother, high-accuracy user experience.
 
 ---
 
