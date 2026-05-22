@@ -11,6 +11,9 @@ except ImportError:
         import tensorflow as tf
         TFLiteInterpreter = tf.lite.Interpreter
     except ImportError:
+        print("[ERROR] Neither 'tflite_runtime' nor 'tensorflow' could be imported.")
+        print("[ERROR] Please run the script using your virtual environment Python:")
+        print("        .venv\\Scripts\\python training/evaluate.py")
         sys.exit(1)
 
 IMG_SIZE = 48
@@ -70,6 +73,8 @@ def main():
     model_path = os.path.join(script_dir, "..", "ml_service", "emotion_model.tflite")
 
     if not os.path.exists(model_path):
+        print(f"[ERROR] TFLite model not found at '{model_path}'.")
+        print("        Please make sure you have trained and converted the model first.")
         sys.exit(1)
 
     interpreter = TFLiteInterpreter(model_path=model_path)
@@ -79,6 +84,8 @@ def main():
 
     X_test, y_true = load_test_dataset(test_dir)
     if X_test is None or len(X_test) == 0:
+        print(f"[ERROR] No test images found in dataset directory '{test_dir}'.")
+        print("        Please ensure you have placed your test images in 'training/dataset/test/'.")
         sys.exit(1)
 
     y_pred = []
